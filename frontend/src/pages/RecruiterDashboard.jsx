@@ -1,0 +1,13 @@
+import { useEffect, useState } from 'react'
+import api from '../services/api'
+
+export default function RecruiterDashboard(){
+ const [jobs,setJobs]=useState([]), [apps,setApps]=useState([]), [companies,setCompanies]=useState([]), [msg,setMsg]=useState('')
+ const [form,setForm]=useState({title:'',description:'',requirements:'',responsibilities:'',location:'Hyderabad',job_type:'Full Time',experience_level:'Fresher',category:'Backend',salary_min:300000,salary_max:800000,is_remote:false,company_id:''})
+ const load=async()=>{const [j,a,c]=await Promise.all([api.get('/jobs/mine'),api.get('/applications'),api.get('/companies')]);setJobs(j.data);setApps(a.data);setCompanies(c.data); if(c.data[0]&&!form.company_id)setForm(f=>({...f,company_id:c.data[0].id}))}
+ useEffect(()=>{load()},[])
+ const change=e=>setForm({...form,[e.target.name]:e.target.type==='checkbox'?e.target.checked:e.target.value})
+ const create=async(e)=>{e.preventDefault(); await api.post('/jobs',{...form,company_id:Number(form.company_id),salary_min:Number(form.salary_min),salary_max:Number(form.salary_max)}); setMsg('Job created successfully'); load()}
+ const status=async(id,s)=>{await api.put(`/applications/${id}`,{status:s}); load()}
+ return <div className="page"><h1>Recruiter Dashboard</h1><div className="stats"><div className="card"><b>{jobs.length}</b><span>My Jobs</span></div><div className="card"><b>{apps.length}</b><span>Applications</span></div><div className="card"><b>{companies.length}</b><span>Companies</span></div></div><form className="card form-grid" onSubmit={create}><h2>Create Job</h2><input name="title" placeholder="Job Title" value={form.title} onChange={change} required/><textarea name="description" placeholder="Description" value={form.description} onChange={change} required/><textarea name="requirements" placeholder="Requirements" value={form.requirements} onChange={change} required/><input name="location" value={form.location} onChange={change}/><select name="company_id" value={form.company_id} onChange={change}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><input name="category" value={form.category} onChange={change}/><input name="salary_min" type="number" value={form.salary_min} onChange={change}/><input name="salary_max" type="number" value={form.salary_max} onChange={change}/><button className="btn btn-primary">Create Job</button>{msg&&<p>{msg}</p>}</form><div className="card"><h2>Applications</h2><table><tbody>{apps.map(a=><tr key={a.id}><td>{a.candidate?.name}</td><td>{a.job?.title}</td><td>{a.status}</td><td><button onClick={()=>status(a.id,'shortlisted')}>Shortlist</button> <button onClick={()=>status(a.id,'rejected')}>Reject</button></td></tr>)}</tbody></table></div></div>
+}
